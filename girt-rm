@@ -1,0 +1,300 @@
+#!/bin/dash
+
+# based on the reference implementation: only for girt-rm
+# when the file exists in cwd, index and commit repo
+# if contents of cwd = index = repo => ok to rm
+# if contents of cwd != index, index = repo => repository is different to the working file
+# if contents of cwd = index, index != repo => has staged changes in the index
+# if contents of cwd != index != repo => in index different to both the working file and repo
+
+# when the file exists only in cwd
+#error and exit
+
+#when the file exists in cwd and index => has staged based on diff
+
+
+# if the .girt does not exit, output error message and exit
+if ! test -d ".girt"
+then
+    echo "$0 : error: girt repository directory .girt not found" 1>&2
+    exit 1
+fi
+
+force=0
+cached=0
+
+# latest commit number (-2 to account for log.txt in commit repo)
+last_commit_num=$(ls .girt/commit/ 2> /dev/null | wc -l)
+last_commit_num=$(($last_commit_num-2))
+
+# loop through the command line arguments
+for arg in "$@"
+do
+    # if --force is provided, change force to 1
+    if test "$arg" = '--force'
+    then
+        force=1
+
+    # if --cached is provided, change cached to 1
+    elif test "$arg" = '--cached'
+    then
+        cached=1
+    
+    # if flags are not provided, the rest are  file names
+    else
+        wrong_format=$(echo "$arg" | grep -E '^[^a-zA-Z0-9]')
+
+        # if a file with valid name is provided output the error and exit 1
+        if test "$wrong_format" != ""
+        then
+            echo "$0: error: invalid filename '$arg'" 1>&2
+            exit 1
+        
+        # else store the names in a variable
+        else
+            file_names="$file_names $arg"
+        fi
+    fi
+
+done
+
+# in this bit - the ordering of the command line arguments are tested
+# if the ordering is right - exits the if statement
+# if the oerdering is wrong, it will output the usage and exits 1
+if test "$force" -eq 1
+then
+    if test "$cached" -eq 1
+    then
+        if test "$1" = "--force" && test "$2" = "--cached" && test "$3" != ""
+        then
+            break
+        else
+            echo "usage: $0 [--force] [--cached] <filenames>" 1>&2
+            exit 1
+        fi
+    else
+        if test "$1" = "--force" && test "$2" != ""
+        then
+            break
+        else
+            echo "usage: $0 [--force] [--cached] <filenames>" 1>&2
+            exit 1
+        fi
+    fi
+else
+    if test "$cached" -eq 1
+    then
+        if test "$1" = "--cached" &&  test "$2" != ""
+        then
+            break
+        else
+            echo "usage: $0 [--force] [--cached] <filenames>" 1>&2
+            exit 1
+        fi
+    else
+        if test "$1" != ""
+        then
+            break
+        else
+            echo "usage: $0 [--force] [--cached] <filenames>" 1>&2
+            exit 1
+        fi
+    fi
+
+fi
+
+
+
+# this forloop goes through all possible scenarios and tests existence of the files
+# contents of the files and based on the flags will behave and removes the files
+for files_to_delete in $file_names
+do
+    # if the file exist in cwd
+    if test -e "$files_to_delete"
+    then
+
+        # if it exists in index
+        if test -e ".girt/index/$files_to_delete"
+        then
+
+            # if it exists in the latest version of commit repo
+            if test -e ".girt/commit/$last_commit_num/$files_to_delete"
+            then
+
+                # if the same file in cwd and index has the same content
+                if diff "$files_to_delete" ".girt/index/$files_to_delete" >/dev/null
+                then
+
+                    # if the same file in index and commit has the same content
+                    if diff ".girt/index/$files_to_delete" ".girt/commit/$last_commit_num/$files_to_delete" >/dev/null
+                    then
+
+                        # if --cached provided, just remove the one in index
+                        if test "$cached" -eq 1
+                        then
+                            rm ".girt/index/$files_to_delete" &&
+                            continue
+                        
+                        # else, regardless of force being present or not, remove the file from cwd and index
+                        else
+                            rm ".girt/index/$files_to_delete"
+                            rm "$files_to_delete" &&
+                            continue
+                        fi
+                    
+                    # if the file in index and commit is different  
+                    else
+
+                        # if --cached provided, remove it only from index
+                        if test "$cached" -eq 1
+                        then
+                            rm ".girt/index/$files_to_delete" &&
+                            continue
+
+                        # if only --force is provided without cached, remove from both cwd and index
+                        elif test "$force" -eq 1 && test "$cached" -ne 1
+                        then
+                            rm ".girt/index/$files_to_delete"
+                            rm "$files_to_delete" &&
+                            continue
+
+                        # else, data will be lost and output the corresponding error message
+                        else
+                            echo "$0: error: '$files_to_delete' has staged changes in the index" 1>&2
+                            exit 1
+                        fi
+                    fi
+
+                # if the same file in cwd and index is different
+                else
+
+                    # if the index version is the same as the one in latest comit
+                    if diff ".girt/index/$files_to_delete" ".girt/commit/$last_commit_num/$files_to_delete" >/dev/null
+                    then
+
+                        # if force provided without cached, remove from both cwd and index
+                        if test "$force" -eq 1 && test "$cached" -ne 1
+                        then
+                            rm ".girt/index/$files_to_delete"
+                            rm "$files_to_delete" &&
+                            continue
+
+                        # if cached is true, remove the file only from the index
+                        elif test "$cached" -eq 1
+                        then
+                            rm ".girt/index/$files_to_delete" &&
+                            continue
+                        
+                        # else data will be lost and output the corresponding error message
+                        else
+                            echo "$0: error: '$files_to_delete' in the repository is different to the working file" 1>&2
+                            exit 1
+                        fi
+                    
+                    # if the index version is different than the one in latest comit
+                    else
+
+                        # if force is true
+                        if test "$force" -eq 1
+                        then
+
+                            # if cached is true, remove only the index
+                            if test "$cached" -eq 1
+                            then
+                                rm ".girt/index/$files_to_delete"
+                                continue
+
+                            # esle remove from both index and cwd
+                            else
+                                rm ".girt/index/$files_to_delete"
+                                rm "$files_to_delete" &&
+                                continue
+                            fi 
+                        
+                        # else data will be lost even with cached, output the corresponding error
+                        else
+                            echo "$0: error: '$files_to_delete' in index is different to both to the working file and the repository" 1>&2
+                            exit 1
+                        fi
+                    fi
+                fi
+
+            # if th file does not exist in the latest commit
+            else
+
+                # if the cwd and index version are not different
+                if diff "$files_to_delete" ".girt/index/$files_to_delete" >/dev/null
+                then
+
+                    # if --force provided without cached, remove from both cwd and index
+                    if test "$force" -eq 1 && test "$cached" -ne 1
+                    then
+                        rm ".girt/index/$files_to_delete"
+                        rm "$files_to_delete" &&
+                        continue
+                        
+                    # if cached is true, only remove from index
+                    elif test "$cached" -eq 1
+                    then
+                        rm ".girt/index/$files_to_delete" &&
+                        continue
+                    
+                    # else data will be lost and output the corresponding error message
+                    else
+                        echo "$0: error: '$files_to_delete' has staged changes in the index" 1>&2
+                        exit 1
+                    fi
+                
+                # if the cwd and index version are different
+                else
+
+                    # if force is true
+                    if test "$force" -eq 1
+                    then
+
+                        # if cached is true, remove only from index
+                        if test "$cached" -eq 1
+                        then
+                            rm ".girt/index/$files_to_delete"
+                            continue
+                        
+                        # if cached is false, remove from both index and cwd
+                        else
+                            rm ".girt/index/$files_to_delete"
+                            rm "$files_to_delete" &&
+                            continue
+                        fi
+                    
+                    # else data will be lost even with cached, output the corresponding error
+                    else 
+                        echo "$0: error: '$files_to_delete' in index is different to both to the working file and the repository" 1>&2
+                        exit 1
+                    fi
+                fi
+            fi
+        
+        # if the file does not exist in index, output error message and exit 1
+        else
+            echo "$0: error: '$files_to_delete' is not in the girt repository" 1>&2
+            exit 1
+        fi
+    
+    # if the file does not exist in cwd
+    else
+
+        # if it exists in index, remove the file from index
+        if test -e ".girt/index/$files_to_delete"
+        then
+            rm ".girt/index/$files_to_delete"
+            continue
+        
+        # else the file is not in the repo and exit 1
+        else
+            echo "$0: error: '$files_to_delete' is not in the girt repository" 1>&2
+            exit 1
+        fi
+    fi
+done
+
+
+

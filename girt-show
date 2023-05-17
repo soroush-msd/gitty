@@ -1,0 +1,85 @@
+#!/bin/dash
+
+# if the .girt does not exit, output error message and exit
+if ! test -d ".girt"
+then
+    echo "$0 : error: girt repository directory .girt not found" 1>&2
+    exit 1
+fi
+
+# if the number of args is not equal to 1, output usage to stderr
+if test "$#" -ne 1
+then
+    echo "usage: $0 <commit>:<filename>" 1>&2
+    exit 1
+fi
+
+
+commit_num=$(echo "$1" | cut -d':' -f1) # firt part of the argument 
+file_name=$(echo "$1" | cut -d':' -f2)  # second part of the argument
+
+wrong_format=$(echo "$file_name" | grep -E '^[^a-zA-Z0-9]')
+
+# if a file with valid name is provided output the error and exit 1
+if test "$wrong_format" != ""
+then
+    echo "$0: error: invalid filename '$file_name'" 1>&2
+    exit 1
+fi
+
+# if no commit number is provided
+if test "$commit_num" = ""
+then
+
+    # go to the index and if the file exists, output its content
+    if test -e ".girt/index/$file_name"
+    then
+        output=$(cat ".girt/index/$file_name")
+        if test "$output" = ""
+        then
+            exit 0
+        else
+            echo "$output"
+            exit 0
+        fi
+
+    # else output error message to stderr and exit 1
+    else
+        echo "$0: error: '$file_name' not found in index" 1>&2
+        exit 1
+    fi
+
+# if the commit number is provided
+else
+
+    # get the valid commit numbers by running girt-log
+    valid_commit=$(sh girt-log | cut -d' ' -f1)
+
+    # by looping through the numbers from girt-log
+    for valid_num in $valid_commit
+    do
+        # if the requested commit number is among the valids
+        if test "$commit_num" -eq "$valid_num"
+        then
+
+            # if the requested file exist in the commit dir with the valid commit number
+            if test -e ".girt/commit/$commit_num/$file_name"
+            then
+
+                # output the content of the file
+                output=$(cat ".girt/commit/$commit_num/$file_name")
+                echo "$output"
+                exit 0
+
+            # else the file does not exist in that commit 
+            else
+                echo "$0: error: '$file_name' not found in commit $commit_num" 1>&2
+                exit 1
+            fi
+        else
+            continue
+        fi
+    done
+    echo "$0: error: unknown commit '$commit_num'" 1>&2
+    exit 1
+fi

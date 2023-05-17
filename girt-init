@@ -1,0 +1,29 @@
+#!/bin/dash
+
+# if argument provided, output usage and exit
+if  test "$#" -ne 0
+then 
+    echo "usage: $0" 1>&2
+    exit 1
+fi
+
+# if repo does not exist, make one with its corresponding directories inside
+# index to store staged files
+# commit to store a snapshot of the cwd
+# log to store commit # and commit message
+if ! test -d ".girt"
+then
+    mkdir ".girt" &&
+    cd ".girt" &&
+    mkdir "index" &&
+    mkdir "commit" &&
+    cd "commit" &&
+    touch "log.txt" &&
+    echo "Initialized empty girt repository in .girt" &&
+    exit 0
+
+# if the repo exists, output the message and exit
+else
+    echo "$0: error: .girt already exists" 1>&2
+    exit 1;
+fi

@@ -1,0 +1,68 @@
+#!/bin/dash
+
+
+# test if the repo does not exist
+if ! test -d ".girt"
+then
+    echo "$0: error: girt repository directory .girt not found" 1>&2
+    exit 1
+fi
+
+# test if no filename is provided
+if test "$#" -eq 0
+then
+    echo "usage: $0 <filenames>" 1>&2
+    exit 1
+fi
+
+
+# going through filenames in command line arguments
+for file_names in "$@"
+do
+    # storing filenames with incorrect format
+    wrong_format=$(echo "$file_names" | grep -E '^[^a-zA-Z0-9]')
+
+    # if the file does not exit in cwd
+    if ! test -e $file_names
+    then
+        if test "$wrong_format" != ""
+        then
+            echo "$0: error: invalid filename '$file_names'" 1>&2
+            exit 1
+
+        # if the file is not stored in index, can not open file and exit
+        elif ! test -e ".girt/index/$file_names"
+        then
+            echo "$0: error: can not open '$file_names'" 1>&2
+            exit 1
+        
+        # if the file is stored in the index, remove it from index and continue
+        else
+            rm ".girt/index/$file_names"
+            continue
+        fi
+
+    # if the file exists in cwd
+    else
+
+        # if the format is wrong, output invalid file name and exit
+        if test "$wrong_format" != ""
+        then
+            echo "$0: error: invalid filename '$file_names'" 1>&2
+            exit 1
+
+        # if the file is stored in index, replace it
+        elif test -e ".girt/index/$file_names"
+        then
+            cp "$file_names" ".girt/index/$file_names"
+            continue
+                
+        # if the file is not stored in index, copy it in index and continue
+        else
+            cp "$file_names" ".girt/index/$file_names"
+            continue
+        fi
+    fi
+
+done
+

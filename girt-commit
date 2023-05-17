@@ -1,0 +1,163 @@
+#!/bin/dash
+
+# if the .girt does not exit, output error message and exit
+if ! test -d ".girt"
+then
+    echo "$0 : error: girt repository directory .girt not found" 1>&2
+    exit 1
+fi
+
+# store message in $message as the last argument is always the message
+for message in "$@"
+do
+    # if the number of args is incorrect, output error and exit
+    # orders and positions are not tested
+    if test "$#" -lt 2 || test "$#" -gt 3
+    then
+        echo "usage: $0 [-a] -m commit-message" 1>&2
+        exit 1
+    
+    # if $# is 2 check the order of -m flag and message is correct
+    elif test "$#" -eq 2
+    then
+        message_2=$(echo "$2" | grep -E '^[^-]')
+        if test "$1" = "-m" && test "$message_2" != ""
+        then
+            continue
+
+        # else just output the usage and exit 1
+        else
+            echo "usage: $0 [-a] -m commit-message" 1>&2
+            exit 1
+        fi
+
+    # if number of args is 3 -a flag must have been provided
+    elif test "$#" -eq 3
+    then
+
+        # check the order of args is correct
+        message_3=$(echo "$3" | grep -E '^[^-]')
+        if test "$1" = "-a" && test "$2" = "-m" && test "$message_3" != ""
+        then
+            continue
+
+        # else just output the usage and exit 1
+        else
+            echo "usage: $0 [-a] -m commit-message" 1>&2
+            exit 1
+        fi
+    fi
+done
+
+
+index_files=$(ls .girt/index/* 2> /dev/null | wc -l) # number of files in index
+commit_num=$(ls .girt/commit/ 2> /dev/null | wc -l) # number of commits made so far
+commit_num=$(($commit_num-2)) # latest commit number (-2 to account for log.txt in commit repo)
+commit_num_next=$(($commit_num+1)) # commit number for next commit to be made
+
+# number of files in the latest commit
+commit_file_numbers=$(ls .girt/commit/$commit_num/ 2> /dev/null | wc -l)
+
+# a function to make a new commit 
+commit(){
+
+    # make new commit dir being named based on the next commit number
+    mkdir ".girt/commit/$commit_num_next" &&
+
+    # copy the contents of the index into the new commit dir
+    cp -r ".girt/index/." ".girt/commit/$commit_num_next/" &&
+    echo "Committed as commit $commit_num_next" &&
+
+    # add the commit number along with the commit message to log.txt
+    echo "$commit_num_next $message" >> ".girt/commit/log.txt" &&
+    commit_num_next=$(($commit_num+1))
+    exit 0
+}
+
+if test "$#" -eq 2
+then
+    #if repo (commit) folder is empty
+    if test "$commit_num" -eq -1 
+    then
+
+        # if index is empty, there is nothing to commit
+        if test "$index_files" -eq 0 
+        then 
+            echo "nothing to commit"
+            exit 0
+    
+        # if index is not empty, copy the contents of index in commit and
+        # write to the log
+        else
+            commit
+        fi
+    
+    # if commit repo is not empty
+    else
+        commit_files=$(ls .girt/commit/$commit_num 2> /dev/null | wc -l)
+
+        # if number of files in index and latest commit folder is different
+        # make a new commit
+        if test "$commit_files" -ne "$index_files"
+        then
+            commit
+        
+        # if they have the same number of folders
+        else
+
+            # if both have 0 files - nothing to commit
+            if test "$commit_file_numbers" -eq 0 && test "$index_files" -eq 0
+            then
+                echo "nothing to commit"
+                exit 0
+
+            # else loop through the files in index
+            else
+                for files in ".girt/index/"*
+                do
+                    base_name=$(echo "$files" | cut -d'/' -f3)
+
+                    # if a file with the same name exists in the latest commit dir
+                    if test -e ".girt/commit/$commit_num/$base_name"
+                    then
+
+                        # do diff to check whether the file has been changed - if not continue
+                        if diff "$files" ".girt/commit/$commit_num/$base_name" >/dev/null
+                        then
+                            continue
+
+                        # else make a new commit
+                        else
+                            commit
+                        fi
+
+                    # if the file does not exist in the commit dir - make a new commit
+                    else
+                        commit
+                    fi
+                done
+                echo "nothing to commit"
+                exit 0
+            fi
+        fi
+    fi
+
+# if -a option is requested
+else
+    for indexed_file in ".girt/index/"*
+    do
+        index_size=$(ls .girt/index/ 2> /dev/null | wc -l)
+
+        # if the index is not empty - add the files with the same name from cwd
+        if test "$index_size" -ne 0
+        then
+            base_name=$(echo "$indexed_file" | cut -d'/' -f3)                  
+            sh girt-add "$base_name"
+        fi
+    done
+
+    # and call this file again without -a option
+    sh girt-commit -m "$3"
+fi
+
+

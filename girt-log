@@ -1,0 +1,28 @@
+#!/bin/dash
+
+# if the .girt does not exit, output error message and exit 1
+if ! test -d ".girt"
+then
+    echo "$0 : error: girt repository directory .girt not found" 1>&2
+    exit 1
+fi
+
+# if number of args is not zero - output usage and exit 1
+if test "$#" -ne 0
+then 
+    echo "usage: $0" 1>&2
+    exit 1
+fi
+
+# if the log.txt is empty, do nothing and exit 0
+if ! test -s ".girt/commit/log.txt"
+then
+    exit 0
+fi
+
+# if not empty, sort the file numerically reversed and print them to stdout
+output=$(cat ".girt/commit/log.txt" | sort -nr)
+echo "$output"
+exit 0
+
+

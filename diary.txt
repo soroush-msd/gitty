@@ -1,0 +1,82 @@
+Date        Start       Stop        Activity        Comments
+
+17/03/21    10:00AM     12:00PM     Read spec       read the assignment specification
+                                                    for the first time. took some notes 
+                                                    about girt-functions and assumptions.
+                                                    asked my tutor for clarification
+                                                    on the tree structure of directories
+                                                    and files.
+
+30/03/21    12:00pm     2:00PM      Coding          implemented girt-init functionality 
+                                    girt-init       and initialising .girt - index - and
+                                    and girt-add    commit repo. implemented basic add
+                                                    functionality without any error checking
+                                                    and testing.
+                                                    passed autotests for init.
+
+31/03/21    9:00PM      11:30PM     Coding and      finished implementing girt-add and 
+                                    debugging       started debugging. files were not 
+                                    girt-add        added correclty. found issue the way
+                                                    i was addressing their path using cp.
+                                                    Issue solved.
+                                                    passed autotests for init and add.
+
+01/04/21    5:30PM      8:00PM      Coding and      implemented commit -m. used the reference
+                                    debugging       implementation to understand the behavior
+                                    girt-commit     of girt-commit. debugged halfway through
+                                                    commit numbers are not working as they should be.
+                                                    
+
+01/04/21    10:30PM     1:00PM      debugged        fixed commit numbers issue. forgot to account
+                                    girt-commit     for log.txt in commit directories. 
+                                                    had problems copying contents of index into commit
+                                                    repos. after researching, used cp -r for this purpose.
+                                                    passed autotests for commit in subset 0.
+
+02/04/21    11:00PM     1:30PM      Coding          implementing girt-log was fairly quick and easy. just
+                                    girt-log and    had to read from log.txt and sort the file numerically.
+                                    girt-show       implemented basic functionality of girt-show without any
+                                                    error checking.
+
+02/04/21    4:30PM      6:30PM      Coding and      used the reference implementation to 
+                                    debugging       understand girt-show messages. coding this
+                                    girt-show       this bit was straightforward. passed autotests
+                                                    for subset 0.
+
+03/04/21    12:00PM     2:30PM      Coding and      spend a lot of time thinking I need to 
+                                    debugging       implement commit -a from scratch. realised after
+                                    commit -a -m    had to write only 10 lines of code to
+                                    and girt-rm     add the tracked the files and call the function
+                                                    itself again without -a option.
+                                                    started implementing girt-rm basic functionalities.
+
+03/04/21    4:00PM      7:00PM      Coding and      implemented girt-rm. the code was too buggy.
+                                    debugging       spent a lot of time debugging.
+                                    girt-rm         I realised that I had not understood how girt-rm
+                                                    works under different circumstances. failed autotests.
+
+03/04/21    8:00PM      11:00PM     understanding   spent some time with the reference implementation
+                                    girt-rm         to understand girt-rm. took some notes for different
+                                                    situations in girt-rm. deleted my girt-rm code fully
+                                                    since it had a lot of bugs and decided to start over.
+
+04/04/21    11:00AM     1:00PM      Coding and      I started writing girt-rm with plan this time. was able
+                                    debugging       to code and debug fairly quickly since I had much clearer
+                                    girt-rm         understanding of this function. passed autotests.
+
+04/04/21    5:00PM      9:00PM      Coding and      finished implementing quickly. but the code again 
+                                    debugging       was too buggy. spent quite a lot of time fixing the bugs.
+                                    girt-status     spent 2 hours only on one single autotest that girt-status
+                                                    was failing. found out I was using exit instead of break
+                                                    in one of my if statements. noticed missed an important
+                                                    condition for girt-commit and it was causing my girt-status
+                                                    to fail. Fixed all issues. autotests passed.
+
+05/04/21    11:00AM     3:00PM      writing test    wrote test 10 test scripts testing 
+                                    scripts         different functionalities with different 
+                                                    conditions. picked up some minor bugs along the way!
+
+05/04/21    5:30PM      8:00PM      commenting and  added comments to my codes for better readability.
+                                    cleaning up     did minor refactoring to improve readability and 
+                                                    maintainability.
+

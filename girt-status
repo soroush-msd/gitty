@@ -1,0 +1,189 @@
+#!/bin/dash
+
+# if the .girt does not exit, output error message and exit
+if ! test -d ".girt"
+then
+    echo "$0 : error: girt repository directory .girt not found" 1>&2
+    exit 1
+fi
+
+# latest commit number (-2 to account for log.txt in commit repo)
+last_commit=$(ls .girt/commit/ 2> /dev/null | wc -l)
+last_commit=$(($last_commit-2))
+
+# to keep track of status of the other files 
+status_file=".girt/status.txt"
+
+# number of files in index
+index_size=$(ls .girt/index/ 2> /dev/null | wc -l)
+
+# number of files in cwd
+cwd_size=$(ls * 2> /dev/null | wc -l)
+
+
+# this loop is for handling the status for deleted files
+# loops through commited files in the last commit 
+for committed_file in ".girt/commit/$last_commit/"*
+do
+    # base name of the files in commited dir
+    base_name=$(echo "$committed_file" | cut -d'/' -f4)
+
+    # number of files in the latest commit dir
+    repo_size=$(ls .girt/commit/$last_commit 2> /dev/null | wc -l)
+
+    # if the latest commit dir is not empty
+    if test "$repo_size" -ne 0
+    then
+
+        # if the file does not exist in cwd
+        if ! test -e "$base_name"
+        then
+
+            # if the file does not exist in index, append deleted to the status file
+            if ! test -e ".girt/index/$base_name"
+            then
+                echo "$base_name - deleted" >> $status_file
+                continue
+            
+            # if the files exists in index
+            else
+
+                # if it is the same as the committed file, output file deleted to the status file
+                if diff "$committed_file" ".girt/index/$base_name"
+                then
+                    echo "$base_name - file deleted" >> $status_file
+                    continue
+                
+                # if it is different to the committed version, output with different changes staged to the status file
+                else
+                    echo "$base_name - file deleted, different changes staged for commit" >> $status_file
+                    continue
+                fi
+            fi
+        fi
+    fi
+
+    # loop through the files in index
+    for indexed_files in ".girt/index/"*
+    do
+        base_name_2=$(echo "$indexed_files" | cut -d'/' -f3)
+
+        # if the size of index is not zero
+        if test "$index_size" -ne 0
+        then
+
+            # if the file does not exist in the latest commit
+            if ! test -e ".girt/commit/$last_commit/$base_name_2"
+            then
+
+                # if the file does not exist in cwd, append the corresponding delete message to the status file
+                if ! test -e "$base_name_2"
+                then
+                    echo "$base_name_2 - added to index, file deleted" >> $status_file
+                    continue
+                fi
+            fi
+        fi
+    done
+
+done
+
+
+# this loop is for other status messages excluding the delete ones
+# it starts by looping through the files in cwd
+for cwd_file in *
+do
+
+    # if cwd is not empty
+    if test "$cwd_size" -ne 0
+    then
+
+        # if the file exists in index
+        if test -e ".girt/index/$cwd_file"
+        then
+
+            # if the file exists in the latest commit
+            if test -e ".girt/commit/$last_commit/$cwd_file"
+            then
+
+                # if cwd and index file have the same content
+                if diff "$cwd_file" ".girt/index/$cwd_file" >/dev/null
+                then
+
+                    # if the index and committed version also have the same content, append same as repo to the file
+                    if diff ".girt/index/$cwd_file" ".girt/commit/$last_commit/$cwd_file" >/dev/null
+                    then
+                        echo "$cwd_file - same as repo" >> $status_file 
+                        continue
+                    
+                    # else the file has changed and staged for commit
+                    else
+                        echo "$cwd_file - file changed, changes staged for commit" >> $status_file
+                        continue
+                    fi
+                
+                # if cwd and index file have different contents
+                else
+
+                    # if cwd version is same as the commited, changes not staged
+                    if diff ".girt/index/$cwd_file" ".girt/commit/$last_commit/$cwd_file" >/dev/null
+                    then
+                        echo "$cwd_file - file changed, changes not staged for commit" >> $status_file
+                        continue
+                    
+                    # else different changes staged
+                    else
+                        echo "$cwd_file - file changed, different changes staged for commit" >> $status_file
+                        continue
+                    fi
+                fi
+            
+            # if the file does not exist in the latest commit
+            else
+
+                # if cwd version same as index - added to index
+                if diff "$cwd_file" ".girt/index/$cwd_file" >/dev/null
+                then
+                    echo "$cwd_file - added to index" >> $status_file
+                    continue
+                
+                # else added to index but file changed
+                else
+                    echo "$cwd_file - added to index, file changed" >> $status_file
+                    continue
+                fi
+            fi
+
+        # if not in index - untracked
+        else
+            echo "$cwd_file - untracked" >> $status_file
+        fi
+    # if cwd - index and commit empty - break the loop and do nothing
+    else
+        if test "$index_size" -eq 0
+        then
+            if test "$last_commit" -eq 0
+            then
+                break
+            fi
+        fi
+    fi
+done
+
+# if status file exists - get the content and sort them alphabetically
+# output the content and remove the file
+if test -e "$status_file"
+then
+    output=$(cat $status_file | sort)
+    echo "$output"
+    rm $status_file 
+    exit 0
+
+# if it does not exist - just exit 0 (based on reference implementation)
+else
+    exit 0
+fi
+
+
+
+
