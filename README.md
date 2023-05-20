@@ -5,7 +5,9 @@ Commands implemented are `girt-init`, `girt-add`, `girt-commit`, `girt-log`, `gi
 
 For example:
 
-```$ ./girt-innit```
+```
+$ ./girt-innit
+```
 
 initialises an empty directory called `.girt` to store the new respositroy.
 
@@ -13,6 +15,27 @@ initialises an empty directory called `.girt` to store the new respositroy.
 
 After creating a repo, you can add files to the index using:
 
-```$ ./girt-add file.txt ...```
+```
+$ ./girt-add file.txt ...
+```
 
 which stores the files inside a `.girt` sub-directory.
+
+<br />
+
+In addition,
+```
+$ ./girt-commit -m 'message'
+```
+
+stores a copy of all the files in the index into the respository as expected.
+
+You can run the rest of the commands as below:
+
+```
+$ ./girt-log
+$ ./girt-show [commit]:filename
+$ ./girt-commit [-a] -m 'add and commit'
+$ ./girt-rm [--force] [--cached] filenames...
+$ ./girt-status
+```
